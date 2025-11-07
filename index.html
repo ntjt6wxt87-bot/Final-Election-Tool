@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- GitHub Pages subpath support -->
+  <script>
+    (function() {
+      try {
+        var path = location.pathname;
+        var base = path.endsWith('/') ? path : path.replace(/[^/]+$/, '');
+        var baseEl = document.createElement('base');
+        baseEl.setAttribute('href', base);
+        document.head.insertBefore(baseEl, document.head.firstChild);
+      } catch(e){ console.warn('base inject failed', e); }
+    })();
+  </script>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Bahamas Election Calendar — Full Enhanced Dynamic Version</title>
+<style>
+  :root{
+    --gov-blue:#003366;--gov-accent:#0072ce;--gov-gray:#f6f8fb;
+    --purple:#7c3aed;--navy:#1e3a8a;--royal:#4169e1;--red:#ef4444;--brown:#c49a6c;
+    --blue:#93c5fd;--pink:#fecdd3;--green:#bbf7d0;--teal:#14b8a6;--orange:#fb923c;
+    --brown-b:#5a3b18;--blue-b:#376da7;--teal-b:#036666;
+  }
+  *{box-sizing:border-box}
+  body{font-family:Segoe UI,Arial,sans-serif;background:var(--gov-gray);margin:0;color:#222}
+  header{background:var(--gov-blue);color:#fff;padding:14px 20px;border-bottom:4px solid var(--gov-accent)}
+  .container{display:flex;max-width:1500px;margin:0 auto;gap:18px;padding:16px}
+  .main{flex:3}
+  .sidebar{flex:1;position:sticky;top:10px;height:fit-content}
+  .tabs{display:flex;gap:8px;margin-bottom:10px}
+  .tab{border:1px solid #cfd7e3;background:#fff;border-radius:6px;padding:8px 12px;cursor:pointer}
+  .tab.active{background:var(--gov-blue);color:#fff;border-color:var(--gov-blue)}
+  .controls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;margin:8px 0}
+  .field label{display:block;font-size:13px;margin-bottom:4px}
+  input[type=date]{width:100%;padding:6px;border:1px solid #ccd5e1;border-radius:4px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+  .btn{background:var(--gov-blue);color:#fff;border:none;border-radius:4px;padding:8px 12px;cursor:pointer;font-size:13px}
+  .btn.alt{background:#6b7280}
+  .monthNav{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .title{min-width:180px;text-align:center;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .day-head{background:#eef3f7;font-weight:700;text-align:center;padding:4px;border:1px solid #d1d5db}
+  .cell{min-height:96px;border:1px solid #e5e7eb;border-radius:4px;position:relative;background:#fff;cursor:pointer;isolation:isolate}
+  .dateNum{position:absolute;top:2px;right:4px;font-size:12px;color:#333;z-index:3}
+  .holiday{background:#f3f4f6;color:#999}
+  .tagTop,.tagBottom{position:absolute;left:2px;right:2px;display:flex;flex-direction:column;gap:2px;z-index:4}
+  .tagTop{top:16px;align-items:center}
+  .tagBottom{bottom:2px;align-items:flex-start}
+  .tag{font-size:10px;background:rgba(255,255,255,.92);padding:0 2px;border-radius:2px;font-weight:800;max-width:100%;white-space:normal;word-break:break-word}
+  .paint{position:absolute;inset:0;border-radius:4px;opacity:.6;z-index:1}
+  .hl-anchor{background:var(--purple)}
+  .hl-register{background:var(--navy)}
+  .hl-overseas{background:var(--royal)}
+  .hl-latest{background:var(--red)}
+  .hl-writ{background:var(--brown)}
+  .hl-notice{background:var(--blue)}
+  .hl-nomination{background:var(--pink)}
+  .hl-pubnom{background:var(--green)}
+  .hl-poll{background:var(--teal)}
+  .hl-advance{background:var(--orange)}
+  .hl-issue-suggest{background:#facc15;outline:2px dashed #a07900;outline-offset:-2px}
+  .tri{position:absolute;inset:0;z-index:1}
+  .tri.tl{clip-path:polygon(0 0,100% 0,0 100%)}
+  .tri.br{clip-path:polygon(100% 0,100% 100%,0 100%)}
+  .picked-issue{box-shadow:inset 0 0 0 3px #a07900}
+  .picked-return{box-shadow:inset 0 0 0 3px var(--brown-b)}
+  .picked-notice{box-shadow:inset 0 0 0 3px var(--blue-b)}
+  .picked-nomination{box-shadow:inset 0 0 0 3px #b65763}
+  .picked-pubNom{box-shadow:inset 0 0 0 3px #2c8c52}
+  .picked-poll{box-shadow:inset 0 0 0 3px var(--teal-b)}
+  .picked-register{box-shadow:inset 0 0 0 3px var(--navy)}
+  .numTopRight,.numBottomRight{position:absolute;right:4px;display:flex;flex-direction:column;gap:1px;z-index:5}
+  .numTopRight{top:26px}
+  .numBottomRight{bottom:18px}
+  .chip{font-size:10px;padding:0 3px;border-radius:2px;border:1px solid rgba(0,0,0,.2);background:rgba(255,255,255,.9);font-weight:700}
+  .chip.writ{background:rgba(196,154,108,.35)}
+  .chip.notice{background:rgba(147,197,253,.35)}
+  .chip.nomination{background:rgba(253,164,175,.35)}
+  .chip.pubNom{background:rgba(134,239,172,.35)}
+  .chip.poll{background:rgba(20,184,166,.35)}
+  .chip.issueSuggest{background:rgba(250,204,21,.35)}
+  .badge-oor{position:absolute;left:2px;top:2px;background:#fff0f0;color:#a60000;border:1px solid #d22;border-radius:2px;font-size:9px;font-weight:800;padding:0 3px;z-index:6}
+  .panel{background:#fff;border:1px solid #d9e2ec;border-radius:6px;padding:12px;margin-bottom:12px}
+  .panel h3{margin:0 0 6px;color:var(--gov-blue);font-size:14px}
+  .err{color:#a00;min-height:18px}
+  .legend{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 12px;font-size:11px}
+  .legend-item{display:flex;align-items:center;gap:6px}
+  .legend-color{width:14px;height:10px;border-radius:2px;border:1px solid #cbd5e1}
+  @media print{
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+    header,.tabs,.toolbar,.controls{display:none!important}
+    .container{display:block}
+    .sidebar{display:none!important}
+    .monthBlock{page-break-after:always;break-after:page}
+    .monthBlock:last-child{page-break-after:auto;break-after:auto}
+  }
+</style>
+
+<style>/*__RESPONSIVE_HELPERS__*/
+  html,body{height:100%;margin:0;-webkit-text-size-adjust:100%}
+  :root{--vh:1vh}
+  .app,.viewport-full{min-height:calc(var(--vh) * 100)}
+  body{overflow-x:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .container,.wrapper,.content{max-width:1200px;margin:0 auto;padding:12px;box-sizing:border-box}
+  button,.btn,input[type="button"],input[type="submit"]{min-height:44px;padding:10px 14px;font-size:16px;border:1px solid #d0d7de;border-radius:10px;background:#f6f8fa}
+  input,select,textarea{min-height:38px;font-size:16px}
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse} th,td{border:1px solid #e5e7eb;padding:6px}
+  .controls,.legend,.ranges{display:flex;flex-wrap:wrap;gap:8px}
+  .calendar,.calendar-grid,.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%;box-sizing:border-box}
+  .calendar .day,.calendar .cell,.calendar-grid .day,.month-grid .cell{aspect-ratio:1/1;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:4px;overflow:hidden}
+  @media (max-width:600px){ h1{font-size:22px} h2{font-size:18px} .controls>*{flex:1 1 100%} .calendar .day,.calendar .cell{padding:3px} }
+  @media (max-width:420px){ .calendar,.calendar-grid,.month-grid{gap:3px} th,td{padding:4px} }
+</style>
+
+</head>
+<body>
+<header><h1>Bahamas Election Calendar</h1></header>
+<div class="container">
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" data-target="gen">General</div>
+      <div class="tab" data-target="bye">Bye-Election</div>
+    </div>
+    <section id="gen">
+      <div class="controls">
+        <div class="field"><label>Dissolution</label><input type="date" id="anchor_gen"></div>
+        <div class="field"><label>Issue of Writ</label><input type="date" id="issue_gen"></div>
+        <div class="field"><label>Public Notice of Election</label><input type="date" id="notice_gen"></div>
+        <div class="field"><label>Nomination Day</label><input type="date" id="nom_gen"></div>
+        <div class="field"><label>Public Notice of Nomination</label><input type="date" id="pubnom_gen"></div>
+        <div class="field"><label>Polling Day</label><input type="date" id="poll_gen"></div>
+        <div class="field"><label>Return of Writ</label><input type="date" id="ret_gen"></div>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="ranges_gen">Show ranges</button>
+        <button class="btn alt" id="reset_gen">Reset</button>
+        <div class="monthNav">
+          <button class="btn" id="prev_gen">◀</button>
+          <span class="title" id="title_gen"></span>
+          <button class="btn" id="next_gen">▶</button>
+        </div>
+        <button class="btn" id="printCal_gen">Print Calendar</button>
+        <button class="btn" id="printKey_gen">Print Key Dates</button>
+      </div>
+      <div class="grid" id="grid_gen"></div>
+      <div id="multi_gen" style="display:none"></div>
+      <div class="panel">
+        <h3>Color Index</h3>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color" style="background:var(--purple)"></span>Dissolution</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--brown)"></span>Return Range</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--blue)"></span>Public Notice of Election</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--pink)"></span>Nomination</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--green)"></span>Public Notice of Nomination</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--teal)"></span>Poll Range (teal)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--navy)"></span>Register (15)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--orange)"></span>Advance (≤14)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--royal)"></span>Overseas Reg (≤7)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--red)"></span>Latest Return</div>
+        </div>
+      </div>
+      <div id="err_gen" class="err"></div>
+    </section>
+    <section id="bye" style="display:none">
+      <div class="controls">
+        <div class="field"><label>Vacancy</label><input type="date" id="anchor_bye"></div>
+        <div class="field"><label>Issue of Writ</label><input type="date" id="issue_bye"></div>
+        <div class="field"><label>Public Notice of Election</label><input type="date" id="notice_bye"></div>
+        <div class="field"><label>Nomination Day</label><input type="date" id="nom_bye"></div>
+        <div class="field"><label>Public Notice of Nomination</label><input type="date" id="pubnom_bye"></div>
+        <div class="field"><label>Polling Day</label><input type="date" id="poll_bye"></div>
+        <div class="field"><label>Return of Writ</label><input type="date" id="ret_bye"></div>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="ranges_bye">Show ranges</button>
+        <button class="btn alt" id="reset_bye">Reset</button>
+        <div class="monthNav">
+          <button class="btn" id="prev_bye">◀</button>
+          <span class="title" id="title_bye"></span>
+          <button class="btn" id="next_bye">▶</button>
+        </div>
+        <button class="btn" id="printCal_bye">Print Calendar</button>
+        <button class="btn" id="printKey_bye">Print Key Dates</button>
+      </div>
+      <div class="grid" id="grid_bye"></div>
+      <div id="multi_bye" style="display:none"></div>
+      <div class="panel">
+        <h3>Color Index</h3>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-color" style="background:var(--purple)"></span>Vacancy</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--brown)"></span>Return Range</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--blue)"></span>Public Notice of Election</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--pink)"></span>Nomination</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--green)"></span>Public Notice of Nomination</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--teal)"></span>Poll Range (teal)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--navy)"></span>Register (15)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--orange)"></span>Advance (≤14)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--royal)"></span>Overseas Reg (≤7)</div>
+          <div class="legend-item"><span class="legend-color" style="background:var(--red)"></span>Latest Return</div>
+        </div>
+      </div>
+      <div id="err_bye" class="err"></div>
+    </section>
+  </div>
+  <aside class="sidebar">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Instructions</h3>
+        <button class="btn" id="toggleInst" style="padding:4px 8px">Hide</button>
+      </div>
+      <div id="instBody" style="font-size:10.5px">
+        <ol style="margin:0;padding-left:18px">
+          <li>Select <b>General</b> or <b>Bye-Election</b>.</li>
+          <li>Click a field, then click a date in the calendar.</li>
+          <li>For statutory calculations, <b>business days</b> means days excluding Sundays and public holidays (Parliamentary Elections Act). Labels below use concise statutory wording.</li>
+          <li>Periods between anchor (Dissolution/Vacancy) and latest constitutional return are calendar days.</li>
+          <li>Use <b>Show ranges</b>. Overlaps show as a 50/50 diagonal split.</li>
+          <li>Print Calendar (landscape, one month per page) or Print Key Dates (portrait). Colors are preserved in print.</li>
+        </ol>
+        <div class="calc-summary" style="margin-top:10px">
+          <h4>Summary of Statutory Calculations</h4>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <tr><th style="border:1px solid #d9e2ec;padding:4px;background:#eef3f7;text-align:left">Provision</th><th style="border:1px solid #d9e2ec;padding:4px;background:#eef3f7;text-align:left">Calculation Rule</th></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Latest Return (Constitutional)</b></td><td style="border:1px solid #d9e2ec;padding:4px">Within <b>90 days</b> (General) or <b>60 days</b> (Bye-Election) of Dissolution/Vacancy — calendar days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Return Range</b></td><td style="border:1px solid #d9e2ec;padding:4px">Return must be <b>26–30 days (Bye)</b> or <b>26–31 days (General)</b> after Issue of Writ — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Public Notice of Election</b></td><td style="border:1px solid #d9e2ec;padding:4px">Issued <b>within 2 days</b> after Issue of Writ — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Nomination Day</b></td><td style="border:1px solid #d9e2ec;padding:4px"><b>5–8 days</b> after Public Notice of Election — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Public Notice of Nomination</b></td><td style="border:1px solid #d9e2ec;padding:4px">Issued <b>within 2 days</b> after Nomination Day — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Polling Day Range</b></td><td style="border:1px solid #d9e2ec;padding:4px"><b>26–31 days (General)</b> or <b>26–30 days (Bye)</b> after Issue of Writ — business days, excluding Sundays and holidays.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Register Publication</b></td><td style="border:1px solid #d9e2ec;padding:4px"><b>15 days</b> after Issue of Writ — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Advance Poll</b></td><td style="border:1px solid #d9e2ec;padding:4px">Held <b>within 14 days</b> after Issue of Writ — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Overseas Registration</b></td><td style="border:1px solid #d9e2ec;padding:4px">Closes <b>within 7 days</b> after Issue of Writ — business days.</td></tr>
+            <tr><td style="border:1px solid #d9e2ec;padding:4px"><b>Reverse (Poll → Writ)</b></td><td style="border:1px solid #d9e2ec;padding:4px">If polling known, count back <b>26–30/31 days</b> to estimate Issue of Writ — business days.</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Key Dates & Ranges (<span id="which">General</span>)</h3>
+      <div id="summary" style="font-size:13px"></div>
+    </div>
+  </aside>
+</div>
+<script>
+window.addEventListener('DOMContentLoaded', function(){
+(function(){
+  const holidays=['2025-01-01','2025-01-10','2025-04-18','2025-04-21','2025-06-06','2025-06-09','2025-07-10','2025-08-05','2025-10-13','2025-12-25','2025-12-26'];
+  const H=new Set(holidays);
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthsS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmt=d=>d.toISOString().slice(0,10);
+  const parse=s=>new Date(s+'T00:00:00');
+  const fmtHuman=d=>`${d.getDate()} ${monthsS[d.getMonth()]} ${d.getFullYear()}`;
+  const isSunday=d=>d.getDay()===0; const isHolidayISO=iso=>H.has(iso); const isHoliday=d=>isHolidayISO(fmt(d)); const isBiz=d=>!isSunday(d)&&!isHoliday(d);
+  const addDays=(d,n)=>{const r=new Date(d); r.setDate(r.getDate()+n); return r};
+  function addBiz(start,n){let d=new Date(start),a=0;while(a<n){d.setDate(d.getDate()+1);if(isBiz(d))a++;}return d}
+  function subBiz(start,n){let d=new Date(start),a=0;while(a<n){d.setDate(d.getDate()-1);if(isBiz(d))a++;}return d}
+
+  function writWindow(issue,min,max){return{earliest:addBiz(issue,min),latest:addBiz(issue,max)}}
+  function noticeWindow(issue){return{earliest:new Date(issue),latest:addBiz(issue,2)}}
+  function nominationWindow(notice){return{earliest:addBiz(notice,5),latest:addBiz(notice,8)}}
+  function pubNomWindow(nom){return{earliest:new Date(nom),latest:addBiz(nom,2)}}
+  function pollWindow(issue,isBye){let e=addBiz(issue,26), l=addBiz(issue,isBye?30:31); while(!isBiz(e)) e=addDays(e,1); while(!isBiz(l)) l=addDays(l,-1); return{earliest:e, latest:l}}
+  function issueWindowFromPoll(poll,isBye){return{earliest:subBiz(poll,isBye?30:31), latest:subBiz(poll,26)}}
+  function registerFromIssue(issue){return addBiz(issue,15)}
+  function lastAdvance(issue){return addBiz(issue,14)}
+  function lastOverseas(issue){return addBiz(issue,7)}
+
+  const TYPE_TO_CLASS={ writ:'hl-writ', notice:'hl-notice', nomination:'hl-nomination', pubNom:'hl-pubnom', poll:'hl-poll', issueSuggest:'hl-issue-suggest', advance:'hl-advance', register:'hl-register', overseas:'hl-overseas' };
+  const TYPE_LANE={ writ:'top', notice:'top', poll:'top', nomination:'bottom', pubNom:'bottom', issueSuggest:'top' };
+  const TYPE_COLOR={ anchor:'var(--purple)', latest:'var(--red)', register:'var(--navy)', writ:'var(--brown)', notice:'var(--blue)', nomination:'#b65763', pubNom:'#2c8c52', poll:'var(--teal)', advance:'var(--orange)', overseas:'var(--royal)' };
+
+  function init(id, isBye){
+    const cfg={id,isBye, latestReturnDays:isBye?60:90, writMin:26, writMax:isBye?30:35};
+    const grid=document.getElementById('grid_'+id);
+    const title=document.getElementById('title_'+id);
+    const err=document.getElementById('err_'+id);
+    const rangesBtn=document.getElementById('ranges_'+id);
+    const resetBtn=document.getElementById('reset_'+id);
+    const prev=document.getElementById('prev_'+id);
+    const next=document.getElementById('next_'+id);
+    const printCal=document.getElementById('printCal_'+id);
+    const printKey=document.getElementById('printKey_'+id);
+    const multi=document.getElementById('multi_'+id);
+    const inputs={ anchor:document.getElementById('anchor_'+id), issue:document.getElementById('issue_'+id), notice:document.getElementById('notice_'+id), nom:document.getElementById('nom_'+id), pubnom:document.getElementById('pubnom_'+id), poll:document.getElementById('poll_'+id), ret:document.getElementById('ret_'+id) };
+
+    const state={ showRanges:false, field:'issue', anchor:new Date(), issue:null, notice:null, nom:null, pubnom:null, poll:null, ret:null };
+    if(isBye){ inputs.anchor.value='2025-09-28'; state.anchor=parse('2025-09-28'); }
+    else inputs.anchor.value=fmt(state.anchor);
+    let y=state.anchor.getFullYear(), m=state.anchor.getMonth();
+
+    Object.entries(inputs).forEach(([k,el])=> el.addEventListener('focus',()=> state.field=k));
+
+    Object.entries(inputs).forEach(([k,el])=> el.addEventListener('change',()=>{
+      err.textContent='';
+      if(!el.value){ state[k]=null; build(); return; }
+      const d=parse(el.value);
+      if(k==='anchor'){ state.anchor=d; y=d.getFullYear(); m=d.getMonth(); build(); return; }
+      if(d<state.anchor){ err.textContent='Date is before anchor.'; el.value=''; return; }
+      if(k==='poll' && !isBiz(d)){ err.textContent='Poll cannot be on a Sunday/holiday.'; el.value=''; return; }
+      if(k==='ret' && state.issue){ const r=writWindow(state.issue,cfg.writMin,cfg.writMax); if(d<r.earliest||d>r.latest){ err.textContent='Return must be within the statutory window.'; el.value=''; return; }}
+      if(k==='notice' && state.issue){ const r=noticeWindow(state.issue); if(d<r.earliest||d>r.latest){ err.textContent='Public Notice of Election must be ≤2 days after Issue of Writ.'; el.value=''; return; }}
+      if(k==='nom' && state.notice){ const r=nominationWindow(state.notice); if(d<r.earliest||d>r.latest){ err.textContent='Nomination must be 5–8 days after Public Notice of Election.'; el.value=''; return; }}
+      if(k==='pubnom' && state.nom){ const r=pubNomWindow(state.nom); if(d<r.earliest||d>r.latest){ err.textContent='Public Notice of Nomination must be ≤2 days after Nomination Day.'; el.value=''; return; }}
+      state[k]=d; build();
+    }));
+
+    rangesBtn.addEventListener('click',()=>{ state.showRanges=!state.showRanges; rangesBtn.textContent=state.showRanges? 'Hide ranges' : 'Show ranges'; render(); });
+    resetBtn.addEventListener('click',()=>{ ['issue','notice','nom','pubnom','poll','ret'].forEach(k=>{ state[k]=null; inputs[k].value=''; }); render(); });
+    prev.addEventListener('click',()=>{ m--; if(m<0){m=11;y--;} buildGrid(y,m); render(); });
+    next.addEventListener('click',()=>{ m++; if(m>11){m=0;y++;} buildGrid(y,m); render(); });
+
+    if(printCal) printCal.addEventListener('click',()=> printCalendar(id, buildMultiMonths));
+    if(printKey) printKey.addEventListener('click',()=> printKeyDates());
+
+    function buildGrid(Y,M){
+      grid.innerHTML='';
+      const heads=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      heads.forEach(h=>{const d=document.createElement('div');d.className='day-head';d.textContent=h;grid.appendChild(d);});
+      const first=new Date(Y,M,1), last=new Date(Y,M+1,0);
+      title && (title.textContent=months[M]+' '+Y);
+      for(let i=0;i<first.getDay();i++){ const s=document.createElement('div'); s.className='cell holiday'; grid.appendChild(s); }
+      for(let day=1;day<=last.getDate();day++){
+        const dt=new Date(Y,M,day); const iso=fmt(dt);
+        const cell=document.createElement('div'); cell.className='cell'; cell.dataset.iso=iso;
+        const num=document.createElement('div'); num.className='dateNum'; num.textContent=day; cell.appendChild(num);
+        const top=document.createElement('div'); top.className='tagTop'; cell.appendChild(top);
+        const bottom=document.createElement('div'); bottom.className='tagBottom'; cell.appendChild(bottom);
+        const numTop=document.createElement('div'); numTop.className='numTopRight'; cell.appendChild(numTop);
+        const numBottom=document.createElement('div'); numBottom.className='numBottomRight'; cell.appendChild(numBottom);
+        if(isSunday(dt)||isHolidayISO(iso)) cell.classList.add('holiday');
+        cell.addEventListener('click',()=> onPick(dt));
+        grid.appendChild(cell);
+      }
+    }
+
+    function tag(cell,text,pos,color){ if(!cell||!text) return; const n=document.createElement('div'); n.className='tag'; if(color) n.style.color=color; n.textContent=text; (pos==='top'?cell.querySelector('.tagTop'):cell.querySelector('.tagBottom')).appendChild(n); }
+    function paint(cell,cls){ const d=document.createElement('div'); d.className='paint '+cls; cell.appendChild(d); return d; }
+    function chip(cell,type,label){ const el=document.createElement('div'); el.className='chip '+(type||''); el.textContent=label; const lane=(TYPE_LANE[type]||'top')==='top'?'.numTopRight':'.numBottomRight'; cell.querySelector(lane).appendChild(el); }
+
+    function fill(byIso,start,end,cls,bizOnly,typeKey,idxStart){
+      if(!start||!end) return {oor:false};
+      let oor=false; const d=new Date(start);
+      const limit=addDays(state.anchor,cfg.latestReturnDays);
+      let num=idxStart||1;
+      const reversed=(typeKey==='issueSuggest');
+      if(reversed) num=isBye?30:31;
+      while(d<=end){
+        const iso=fmt(d);
+        const cell=byIso[iso];
+        const ok=!bizOnly||isBiz(d);
+        if(cell&&ok){
+          if(state.showRanges){
+            paint(cell,cls);
+            const n=parseInt(cell.dataset.rCount||'0')+1; cell.dataset.rCount=String(n);
+            const t=cell.dataset.rTypes?cell.dataset.rTypes.split('|'):[]; if(typeKey&&!t.includes(typeKey)) t.push(typeKey); cell.dataset.rTypes=t.join('|');
+            chip(cell,typeKey,num);
+            num=reversed?num-1:num+1; // sequences
+          }
+          if(d>limit){ oor=true; let b=cell.querySelector('.badge-oor'); if(!b){ b=document.createElement('div'); b.className='badge-oor'; b.textContent='OOR'; cell.appendChild(b);} }
+        }
+        d.setDate(d.getDate()+1);
+      }
+      return {oor};
+    }
+
+    function render(){
+      const cells=[...grid.querySelectorAll('.cell')];
+      const byIso=Object.fromEntries(cells.filter(c=>c.dataset.iso).map(c=>[c.dataset.iso,c]));
+      cells.forEach(c=>{ const hol=c.classList.contains('holiday'); c.className='cell'; if(hol) c.classList.add('holiday'); c.querySelectorAll('.paint,.tri,.tag,.chip,.badge-oor').forEach(e=>e.remove()); delete c.dataset.rCount; delete c.dataset.rTypes; });
+
+      const anchorISO=fmt(state.anchor); if(byIso[anchorISO]){ paint(byIso[anchorISO],'hl-anchor'); tag(byIso[anchorISO], isBye?'Vacancy':'Dissolution','top', TYPE_COLOR.anchor); }
+      const latest=addDays(state.anchor,cfg.latestReturnDays); const latestISO=fmt(latest); if(byIso[latestISO]){ paint(byIso[latestISO],'hl-latest'); tag(byIso[latestISO],'Latest Return','top', TYPE_COLOR.latest); }
+
+      const selectFill={ issue:'hl-writ', ret:'hl-writ', notice:'hl-notice', nom:'hl-nomination', pubnom:'hl-pubnom', poll:'hl-poll' };
+      const picks=[ ['issue','Issue of Writ','picked-issue',TYPE_COLOR.writ], ['ret','Return of Writ','picked-return',TYPE_COLOR.writ], ['notice','Public Notice of Election','picked-notice',TYPE_COLOR.notice], ['nom','Nomination','picked-nomination',TYPE_COLOR.nomination], ['pubnom','Public Notice of Nomination','picked-pubNom',TYPE_COLOR.pubNom], ['poll','Poll','picked-poll',TYPE_COLOR.poll] ];
+      picks.forEach(([key,label,cls,color])=>{ const d=state[key]; if(!d) return; const c=byIso[fmt(d)]; if(c){ c.classList.add(cls); paint(c, selectFill[key]); tag(c,label,'bottom',color); }});
+
+      if(state.issue){
+        const reg=registerFromIssue(state.issue); const rISO=fmt(reg); if(byIso[rISO]){ paint(byIso[rISO],'hl-register'); tag(byIso[rISO],'Register (15)','top', TYPE_COLOR.register); }
+        const adv=lastAdvance(state.issue); const aISO=fmt(adv); if(byIso[aISO]){ paint(byIso[aISO],'hl-advance'); tag(byIso[aISO],'Advance (≤14)','top', TYPE_COLOR.advance); }
+        const ov=lastOverseas(state.issue); const oISO=fmt(ov); if(byIso[oISO]){ paint(byIso[oISO],'hl-overseas'); tag(byIso[oISO],'Overseas Reg (≤7)','top', TYPE_COLOR.overseas); }
+      }
+
+      if(state.showRanges){
+        if(state.issue){
+          const w=writWindow(state.issue,cfg.writMin,cfg.writMax); fill(byIso,w.earliest,w.latest,'hl-writ',true,'writ',cfg.writMin);
+          const n=noticeWindow(state.issue); fill(byIso,n.earliest,n.latest,'hl-notice',true,'notice',1);
+          const p=pollWindow(state.issue,isBye); fill(byIso,p.earliest,p.latest,'hl-poll',true,'poll',26); tag(byIso[fmt(p.earliest)],'Earliest Poll','top', TYPE_COLOR.poll); tag(byIso[fmt(p.latest)],'Latest Poll','top', TYPE_COLOR.poll);
+        }
+        if(state.notice){ const nm=nominationWindow(state.notice); fill(byIso,nm.earliest,nm.latest,'hl-nomination',true,'nomination',5); }
+        if(state.nom){ const pn=pubNomWindow(state.nom); fill(byIso,pn.earliest,pn.latest,'hl-pubnom',true,'pubNom',1); }
+      }
+
+      if(state.showRanges && state.poll && !state.issue){ const iw=issueWindowFromPoll(state.poll,isBye); fill(byIso,iw.earliest,iw.latest,'hl-issue-suggest',true,'issueSuggest',isBye?30:31); }
+
+      cells.forEach(c=>{
+        if(!state.showRanges) return; const types=(c.dataset.rTypes||'').split('|').filter(Boolean);
+        if(types.length===2){
+          c.querySelectorAll('.paint').forEach(e=>e.remove());
+          const tri1=document.createElement('div'); tri1.className='tri tl paint '+TYPE_TO_CLASS[types[0]]; c.appendChild(tri1);
+          const tri2=document.createElement('div'); tri2.className='tri br paint '+TYPE_TO_CLASS[types[1]]; c.appendChild(tri2);
+          c.querySelectorAll('.chip').forEach(n=>{
+            const laneType=[...n.classList].find(x=> TYPE_LANE[x]);
+            const isTop=(TYPE_LANE[laneType]||'top')==='top';
+            n.remove(); (isTop?c.querySelector('.numTopRight'):c.querySelector('.numBottomRight')).appendChild(n);
+          });
+        }
+      });
+
+      renderSummary();
+    }
+
+    function renderSummary(){
+      document.getElementById('which').textContent=isBye?'Bye-Election':'General';
+      const s=document.getElementById('summary');
+      const parts=[]; const push=(k,v)=>parts.push(`<div style="margin:3px 0"><span style="color:#667">${k}</span> <b>${v||'—'}</b></div>`);
+      const latest=addDays(state.anchor,cfg.latestReturnDays);
+      push(isBye?'Vacancy:':'Dissolution:', fmtHuman(state.anchor));
+      push('Latest Return (Const.):', fmtHuman(latest));
+      if(state.issue){ const w=writWindow(state.issue,cfg.writMin,cfg.writMax); push(`Return Range (${cfg.writMin}–${cfg.writMax} days from issue):`, `${fmtHuman(w.earliest)} — ${fmtHuman(w.latest)}`); }
+      push('Issue of Writ (selected):', state.issue?fmtHuman(state.issue):'');
+      push('Return of Writ (selected):', state.ret?fmtHuman(state.ret):'');
+      if(state.issue){ const n=noticeWindow(state.issue); push('Public Notice of Election (≤2 days from issue):', `${fmtHuman(n.earliest)} — ${fmtHuman(n.latest)}`); }
+      push('Notice of Election (selected):', state.notice?fmtHuman(state.notice):'');
+      if(state.notice){ const nm=nominationWindow(state.notice); push('Nomination Range (5–8 days from notice):', `${fmtHuman(nm.earliest)} — ${fmtHuman(nm.latest)}`); }
+      push('Nomination Day (selected):', state.nom?fmtHuman(state.nom):'');
+      if(state.nom){ const pn=pubNomWindow(state.nom); push('Public Notice of Nomination (≤2 days from nomination):', `${fmtHuman(pn.earliest)} — ${fmtHuman(pn.latest)}`); }
+      push('Public Notice of Nomination (selected):', state.pubnom?fmtHuman(state.pubnom):'');
+      if(state.issue){ const p=pollWindow(state.issue,isBye); push(`Poll Range (${isBye? '26–30':'26–31'} days from issue):`, `${fmtHuman(p.earliest)} — ${fmtHuman(p.latest)}`); push('Earliest Poll:', fmtHuman(p.earliest)); push('Latest Poll:', fmtHuman(p.latest)); }
+      push('Polling Day (selected):', state.poll?fmtHuman(state.poll):'');
+      if(state.issue){ const reg=registerFromIssue(state.issue); push('Register Publication (15 days from issue):', fmtHuman(reg)); push('Advance Poll (≤14 days from issue):', fmtHuman(lastAdvance(state.issue))); push('Overseas Registration (≤7 days from issue):', fmtHuman(lastOverseas(state.issue))); }
+      if(state.showRanges && state.poll && !state.issue){ const iw=issueWindowFromPoll(state.poll,isBye); push(`Issue Suggestion (poll back-calculated ${isBye?'30–26':'31–26'} days):`, `${fmtHuman(iw.earliest)} — ${fmtHuman(iw.latest)}`); }
+      s.innerHTML=parts.join('');
+    }
+
+    function onPick(date){
+      const field=state.field; const limit=addDays(state.anchor,cfg.latestReturnDays);
+      err.textContent='';
+      if(field!=='anchor' && date<state.anchor){ err.textContent='Date is before anchor.'; return; }
+      if(field!=='anchor' && date>limit){ err.textContent='Date is after the constitutional latest return window.'; return; }
+      if(field==='poll' && !isBiz(date)){ err.textContent='Poll cannot be on a Sunday/holiday.'; return; }
+      if(field==='ret' && state.issue){ const w=writWindow(state.issue,cfg.writMin,cfg.writMax); if(date<w.earliest||date>w.latest){ err.textContent='Return must be within the statutory window.'; return; }}
+      if(field==='notice' && state.issue){ const n=noticeWindow(state.issue); if(date<n.earliest||date>n.latest){ err.textContent='Public Notice of Election must be ≤2 days after Issue.'; return; }}
+      if(field==='nom' && state.notice){ const nm=nominationWindow(state.notice); if(date<nm.earliest||date>nm.latest){ err.textContent='Nomination must be 5–8 days after Public Notice of Election.'; return; }}
+      if(field==='pubnom' && state.nom){ const pn=pubNomWindow(state.nom); if(date<pn.earliest||date>pn.latest){ err.textContent='Public Notice of Nomination must be ≤2 days after Nomination.'; return; }}
+
+      state[field]=date; document.getElementById(field+'_'+id).value=fmt(date);
+      render();
+    }
+
+    function keysForMonths(){
+      const arr=[state.anchor,state.issue,state.notice,state.nom,state.pubnom,state.poll,state.ret];
+      if(state.issue){arr.push(registerFromIssue(state.issue),lastAdvance(state.issue),lastOverseas(state.issue));}
+      const set=new Map(); arr.filter(Boolean).forEach(d=> set.set(d.getFullYear()+"-"+d.getMonth(), {y:d.getFullYear(), m:d.getMonth()}));
+      return [...set.values()].sort((a,b)=> a.y===b.y? a.m-b.m : a.y-b.y);
+    }
+
+    function buildMultiMonths(){
+      const ks=keysForMonths(); const cont=multi; cont.innerHTML='';
+      const prevY=y, prevM=m;
+      (ks.length? ks : [{y, m}]).forEach(({y:Y, m:M})=>{
+        y=Y; m=M; buildGrid(y,m); render();
+        const block=document.createElement('div'); block.className='monthBlock';
+        const h=document.createElement('h3'); h.textContent=months[M]+" "+Y; h.style.margin='6px 0'; h.style.color='#000';
+        const head=document.createElement('div'); head.className='grid'; head.innerHTML='<div class="day-head">Sun</div><div class="day-head">Mon</div><div class="day-head">Tue</div><div class="day-head">Wed</div><div class="day-head">Thu</div><div class="day-head">Fri</div><div class="day-head">Sat</div>';
+        const cloned=grid.cloneNode(true);
+        block.append(h,head,cloned); cont.append(block);
+      });
+      y=prevY; m=prevM; buildGrid(y,m); render();
+    }
+
+    function build(){ buildGrid(y,m); render(); }
+
+    window['_buildMulti_'+id]=buildMultiMonths;
+
+    build();
+  }
+
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      const tgt=btn.dataset.target;
+      document.getElementById('gen').style.display = tgt==='gen'?'block':'none';
+      document.getElementById('bye').style.display = tgt==='bye'?'block':'none';
+      document.getElementById('which').textContent = tgt==='gen'?'General':'Bye-Election';
+    });
+  });
+
+  document.getElementById('toggleInst').addEventListener('click',()=>{
+    const b=document.getElementById('instBody'); const open=b.style.display!=="none"; b.style.display=open?'none':'block'; document.getElementById('toggleInst').textContent=open?'Show':'Hide';
+  });
+
+  // --- Color-preserving print utilities ---
+  function openPrintDoc(html, features){
+    let w=null; try{ w=window.open('', 'PRINT', features||'height=1000,width=1200'); }catch(e){ w=null; }
+    if(w && w.document){ return w; }
+    const iframe=document.createElement('iframe');
+    iframe.style.position='fixed'; iframe.style.right='0'; iframe.style.bottom='0'; iframe.style.width='0'; iframe.style.height='0'; iframe.style.border='0';
+    document.body.appendChild(iframe);
+    const doc=iframe.contentWindow || iframe.contentDocument;
+    doc.document?.open?.(); doc.document?.write?.(html||''); doc.document?.close?.();
+    setTimeout(()=>{ try{ doc.focus?.(); doc.print?.(); }catch(e){} setTimeout(()=> iframe.remove(), 500); }, 50);
+    return null;
+  }
+
+  function cloneWithComputedColors(node){
+    const clone=node.cloneNode(true);
+    const origEls=node.querySelectorAll('.paint,.tri,.cell,.day-head,.chip,.tagTop,.tagBottom,.dateNum');
+    const cloneEls=clone.querySelectorAll('.paint,.tri,.cell,.day-head,.chip,.tagTop,.tagBottom,.dateNum');
+    origEls.forEach((el,i)=>{
+      const cs=getComputedStyle(el);
+      const c=cloneEls[i]; if(!c) return;
+      c.style.backgroundColor=cs.backgroundColor;
+      c.style.opacity=cs.opacity;
+      c.style.borderColor=cs.borderColor;
+      c.style.color=cs.color;
+    });
+    return clone;
+  }
+
+  function printCalendar(section,builder){
+    const multi=document.getElementById('multi_'+section);
+    if(builder){builder();} else if(window['_buildMulti_'+section]){ window['_buildMulti_'+section](); }
+    const blocks=multi?.querySelectorAll('.monthBlock')||[];
+    if(!blocks.length){ alert('No calendar data to print.'); return; }
+
+    const temp=document.createElement('div');
+    blocks.forEach(b=> temp.appendChild(cloneWithComputedColors(b)));
+
+    const style=`<style>@page{size:A4 landscape;margin:10mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}body{font-family:Segoe UI,Arial,sans-serif;color:#000}.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.day-head{background:#eef3f7 !important;font-weight:700;text-align:center;padding:4px;border:1px solid #d1d5db;color:#000}.cell{min-height:96px;border:1px solid #e5e7eb;border-radius:4px;position:relative;background:#fff;isolation:isolate;color:#000}.dateNum{position:absolute;top:2px;right:4px;font-size:12px;color:#000;z-index:3}.paint{position:absolute;inset:0;border-radius:4px;z-index:1}.tri{position:absolute;inset:0;z-index:1}.tri.tl{clip-path:polygon(0 0,100% 0,0 100%)}.tri.br{clip-path:polygon(100% 0,100% 100%,0 100%)}.tagTop,.tagBottom{position:absolute;left:2px;right:2px;display:flex;flex-direction:column;gap:2px;z-index:4;color:#000}.tagTop{top:16px;align-items:center}.tagBottom{bottom:2px;align-items:flex-start}.numTopRight,.numBottomRight{position:absolute;right:4px;display:flex;flex-direction:column;gap:1px;z-index:5;color:#000}.numTopRight{top:26px}.numBottomRight{bottom:18px}.chip{font-size:10px;padding:0 3px;border-radius:2px;border:1px solid rgba(0,0,0,.2);background:rgba(255,255,255,.9);font-weight:700;color:#000}.monthBlock{page-break-after:always;break-after:page}.monthBlock:last-child{page-break-after:auto;break-after:auto}</style>`;
+
+    const html = '<!doctype html><html><head><title>Calendar</title>' + (style) + '
+<style>/*__RESPONSIVE_HELPERS__*/
+  html,body{height:100%;margin:0;-webkit-text-size-adjust:100%}
+  :root{--vh:1vh}
+  .app,.viewport-full{min-height:calc(var(--vh) * 100)}
+  body{overflow-x:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .container,.wrapper,.content{max-width:1200px;margin:0 auto;padding:12px;box-sizing:border-box}
+  button,.btn,input[type="button"],input[type="submit"]{min-height:44px;padding:10px 14px;font-size:16px;border:1px solid #d0d7de;border-radius:10px;background:#f6f8fa}
+  input,select,textarea{min-height:38px;font-size:16px}
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse} th,td{border:1px solid #e5e7eb;padding:6px}
+  .controls,.legend,.ranges{display:flex;flex-wrap:wrap;gap:8px}
+  .calendar,.calendar-grid,.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%;box-sizing:border-box}
+  .calendar .day,.calendar .cell,.calendar-grid .day,.month-grid .cell{aspect-ratio:1/1;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:4px;overflow:hidden}
+  @media (max-width:600px){ h1{font-size:22px} h2{font-size:18px} .controls>*{flex:1 1 100%} .calendar .day,.calendar .cell{padding:3px} }
+  @media (max-width:420px){ .calendar,.calendar-grid,.month-grid{gap:3px} th,td{padding:4px} }
+</style>
+
+</head><body>' + (temp.innerHTML) + '
+<script>
+  (function(){
+    function setVh(){ document.documentElement.style.setProperty(\'--vh\',(window.innerHeight*0.01)+\'px\'); }
+    setVh(); window.addEventListener(\'resize\', setVh); window.addEventListener(\'orientationchange\', setVh);
+  })();
+</script>
+
+
+<style>#errBanner{position:fixed;left:0;right:0;bottom:0;background:rgba(200,0,0,.9);color:#fff;padding:8px 12px;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;z-index:99999;display:none}</style>
+<div id="errBanner"></div>
+<script>(function(){var b=document.getElementById('errBanner');function s(m){if(!b)return;b.textContent='Error: '+m;b.style.display='block';}window.addEventListener('error',e=>s(e.message));window.addEventListener('unhandledrejection',e=>s((e.reason&&e.reason.message)||'Unhandled rejection'));})();</script>
+
+
+<script>
+  (function() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        try {
+          var baseEl = document.querySelector('base');
+          var baseHref = (baseEl && baseEl.href) || document.baseURI || './';
+          var swUrl = new URL('sw.js', baseHref).toString();
+          navigator.serviceWorker.register(swUrl).then(function(reg){
+            console.log('SW registered', reg.scope);
+          }).catch(function(err){
+            console.warn('SW reg failed', err);
+          });
+        } catch (e) {
+          console.warn('SW registration error', e);
+        }
+      });
+    }
+  })();
+</script>
+
+</body></html>';
+    const w=openPrintDoc(html);
+    if(w && w.document){ w.document.open(); w.document.write(html); w.document.close(); try{ w.focus(); w.print(); }catch(e){} setTimeout(()=>{ try{ w.close(); }catch(e){}; multi.innerHTML=''; }, 100); } else { multi.innerHTML=''; }
+  }
+
+  function printKeyDates(){
+    const sum=document.getElementById('summary');
+    if(!sum || !sum.innerHTML.trim()){ alert('No key dates to print.'); return; }
+    const legend=document.querySelector('.legend');
+    const wrap=document.createElement('div');
+    const head=document.createElement('h3'); head.textContent='Key Dates & Ranges'; head.style.color='#000'; wrap.appendChild(head);
+    wrap.insertAdjacentHTML('beforeend', sum.outerHTML);
+    if(legend){ wrap.appendChild(cloneWithComputedColors(legend)); }
+
+    const style=`<style>@page{size:A4 portrait;margin:12mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}body{font-family:Segoe UI,Arial,sans-serif;color:#000;font-size:12px}h3{color:#000;margin:0 0 8px}.legend-color{width:14px;height:10px;border-radius:2px;border:1px solid #cbd5e1;display:inline-block;margin-right:6px}</style>`;
+    const html = '<!doctype html><html><head><title>Key Dates & Ranges</title>' + (style) + '
+<style>/*__RESPONSIVE_HELPERS__*/
+  html,body{height:100%;margin:0;-webkit-text-size-adjust:100%}
+  :root{--vh:1vh}
+  .app,.viewport-full{min-height:calc(var(--vh) * 100)}
+  body{overflow-x:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .container,.wrapper,.content{max-width:1200px;margin:0 auto;padding:12px;box-sizing:border-box}
+  button,.btn,input[type="button"],input[type="submit"]{min-height:44px;padding:10px 14px;font-size:16px;border:1px solid #d0d7de;border-radius:10px;background:#f6f8fa}
+  input,select,textarea{min-height:38px;font-size:16px}
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse} th,td{border:1px solid #e5e7eb;padding:6px}
+  .controls,.legend,.ranges{display:flex;flex-wrap:wrap;gap:8px}
+  .calendar,.calendar-grid,.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;width:100%;box-sizing:border-box}
+  .calendar .day,.calendar .cell,.calendar-grid .day,.month-grid .cell{aspect-ratio:1/1;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:4px;overflow:hidden}
+  @media (max-width:600px){ h1{font-size:22px} h2{font-size:18px} .controls>*{flex:1 1 100%} .calendar .day,.calendar .cell{padding:3px} }
+  @media (max-width:420px){ .calendar,.calendar-grid,.month-grid{gap:3px} th,td{padding:4px} }
+</style>
+
+</head><body>' + (wrap.innerHTML) + '
+<script>
+  (function(){
+    function setVh(){ document.documentElement.style.setProperty(\'--vh\',(window.innerHeight*0.01)+\'px\'); }
+    setVh(); window.addEventListener(\'resize\', setVh); window.addEventListener(\'orientationchange\', setVh);
+  })();
+</script>
+
+
+<style>#errBanner{position:fixed;left:0;right:0;bottom:0;background:rgba(200,0,0,.9);color:#fff;padding:8px 12px;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;z-index:99999;display:none}</style>
+<div id="errBanner"></div>
+<script>(function(){var b=document.getElementById('errBanner');function s(m){if(!b)return;b.textContent='Error: '+m;b.style.display='block';}window.addEventListener('error',e=>s(e.message));window.addEventListener('unhandledrejection',e=>s((e.reason&&e.reason.message)||'Unhandled rejection'));})();</script>
+
+
+<script>
+  (function() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        try {
+          var baseEl = document.querySelector('base');
+          var baseHref = (baseEl && baseEl.href) || document.baseURI || './';
+          var swUrl = new URL('sw.js', baseHref).toString();
+          navigator.serviceWorker.register(swUrl).then(function(reg){
+            console.log('SW registered', reg.scope);
+          }).catch(function(err){
+            console.warn('SW reg failed', err);
+          });
+        } catch (e) {
+          console.warn('SW registration error', e);
+        }
+      });
+    }
+  })();
+</script>
+
+</body></html>';
+    const w=openPrintDoc(html,'height=900,width=800');
+    if(w && w.document){ w.document.open(); w.document.write(html); w.document.close(); try{ w.focus(); w.print(); }catch(e){} setTimeout(()=>{ try{ w.close(); }catch(e){} }, 100); }
+  }
+
+  window.printCalendar=printCalendar; window.printKeyDates=printKeyDates;
+
+  init('gen', false);
+  init('bye', true);
+
+  document.getElementById('printCal_gen').onclick=()=> printCalendar('gen');
+  document.getElementById('printKey_gen').onclick=()=> printKeyDates();
+  document.getElementById('printCal_bye').onclick=()=> printCalendar('bye');
+  document.getElementById('printKey_bye').onclick=()=> printKeyDates();
+})();
+});
+</script>
+
+<script>
+  (function(){
+    function setVh(){ document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px'); }
+    setVh(); window.addEventListener('resize', setVh); window.addEventListener('orientationchange', setVh);
+  })();
+</script>
+
+
+<style>#errBanner{position:fixed;left:0;right:0;bottom:0;background:rgba(200,0,0,.9);color:#fff;padding:8px 12px;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;z-index:99999;display:none}</style>
+<div id="errBanner"></div>
+<script>(function(){var b=document.getElementById('errBanner');function s(m){if(!b)return;b.textContent='Error: '+m;b.style.display='block';}window.addEventListener('error',e=>s(e.message));window.addEventListener('unhandledrejection',e=>s((e.reason&&e.reason.message)||'Unhandled rejection'));})();</script>
+
+
+<script>
+  (function() {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        try {
+          var baseEl = document.querySelector('base');
+          var baseHref = (baseEl && baseEl.href) || document.baseURI || './';
+          var swUrl = new URL('sw.js', baseHref).toString();
+          navigator.serviceWorker.register(swUrl).then(function(reg){
+            console.log('SW registered', reg.scope);
+          }).catch(function(err){
+            console.warn('SW reg failed', err);
+          });
+        } catch (e) {
+          console.warn('SW registration error', e);
+        }
+      });
+    }
+  })();
+</script>
+
+</body>
+</html>
